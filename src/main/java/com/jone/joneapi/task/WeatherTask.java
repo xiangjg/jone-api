@@ -2,8 +2,10 @@ package com.jone.joneapi.task;
 
 import com.alibaba.fastjson.JSONObject;
 import com.jone.joneapi.dao.IDao;
+import com.jone.joneapi.dao.weather.WeatherCodeRepository;
 import com.jone.joneapi.dao.weather.WeatherRepository;
 import com.jone.joneapi.entity.Weather;
+import com.jone.joneapi.entity.WeatherCode;
 import com.jone.joneapi.util.HttpUtil;
 import com.jone.joneapi.util.WeatherUtil;
 import org.slf4j.Logger;
@@ -29,39 +31,49 @@ public class WeatherTask {
     @Autowired
     private WeatherRepository weatherRepository;
     @Autowired
+    private WeatherCodeRepository weatherCodeRepository;
+    @Autowired
     private IDao dao;
 
     public void sayHello(){
         WeatherUtil demo = new WeatherUtil();
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        String url = "";
         try {
-            String url = demo.generateGetNowWeatherURL(
-                    "WKDXH1Q2BNXZ",
-                    "zh-Hans",
-                    "c"
-            );
-            System.out.println("URL:" + url);
-            String ret = HttpUtil.doGet(url);
-            System.out.println("ret:" + ret);
-            JSONObject jsonObject= JSONObject.parseObject(ret);
-            jsonObject = jsonObject.getJSONArray("results").getJSONObject(0);
-            List<Map<String,Object>> list = dao.findBySqlToMap("select * from d_weather where cid='WKDXH1Q2BNXZ' order by create_time desc limit 1");
-            DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+            List<WeatherCode> wcs = weatherCodeRepository.findAll();
+            for (int i=0;i<wcs.size();i++) {
+                WeatherCode wc = wcs.get(i);
+                List<Map<String,Object>> list = dao.findBySqlToMap("select * from d_weather where cid='"+wc.getCid()+"' order by create_time desc limit 1");
+                if(list!=null&&list.size()>0){
+                    Date nowDate = (Date)list.get(0).get("update_time");
+                    if(df.format(nowDate).equals(df.format(new Date())))
+                        continue;
+                }
+                url = demo.generateGetNowWeatherURL(
+                        wc.getCid(),
+                        "zh-Hans",
+                        "c"
+                );
+                //System.out.println("URL:" + url);
+                String ret = HttpUtil.doGet(url);
+                //System.out.println("ret:" + ret);
+                JSONObject jsonObject= JSONObject.parseObject(ret);
+                try {
+                    jsonObject = jsonObject.getJSONArray("results").getJSONObject(0);
+                }catch (Exception e){
+                    continue;
+                }
+                Weather weather = new Weather();
+                weather.setCid(jsonObject.getJSONObject("location").getString("id"));
+                weather.setCname(jsonObject.getJSONObject("location").getString("name"));
+                weather.setText(jsonObject.getJSONObject("now").getString("text"));
+                weather.setCode(jsonObject.getJSONObject("now").getInteger("code"));
+                weather.setTemperature(jsonObject.getJSONObject("now").getInteger("temperature"));
+                weather.setCreateTime(new Date());
+                Date  date = df.parse(jsonObject.getString("last_update").substring(0,10));
+                weather.setUpdateTime(date);
 
-            Weather weather = new Weather();
-            weather.setCid(jsonObject.getJSONObject("location").getString("id"));
-            weather.setCname(jsonObject.getJSONObject("location").getString("name"));
-            weather.setText(jsonObject.getJSONObject("now").getString("text"));
-            weather.setCode(jsonObject.getJSONObject("now").getInteger("code"));
-            weather.setTemperature(jsonObject.getJSONObject("now").getInteger("temperature"));
-            weather.setCreateTime(new Date());
-            Date  date = df.parse(jsonObject.getString("last_update").substring(0,10));
-            weather.setUpdateTime(date);
-            if(list==null||list.size()==0){
                 weatherRepository.save(weather);
-            }else{
-                Date nowDate = (Date)list.get(0).get("update_time");
-                if(!df.format(nowDate).equals(df.format(df.parse(jsonObject.getString("last_update").substring(0,10)))))
-                    weatherRepository.save(weather);
             }
         } catch (Exception e) {
             e.printStackTrace();

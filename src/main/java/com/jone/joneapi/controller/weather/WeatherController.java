@@ -24,17 +24,15 @@ public class WeatherController extends BaseController {
 
     @RequestMapping(value = "query")
     public void query(HttpServletRequest request, HttpServletResponse response){
-        String name = request.getParameter("name");
         String cid = request.getParameter("cid");
         try {
-            String sql = "select * from d_weather where 1=1  ";
-            if(!StringUtils.isEmpty(name))
-                sql += " and cname='"+name+"' ";
-            if(!StringUtils.isEmpty(cid))
-                sql += " and cid='"+cid+"' ";
-            sql += " order by create_time desc limit 1 ";
-            List<Map<String,Object>> list = dao.findBySqlToMap(sql);
-            printJson(ResultUtil.success(list),response);
+            if(StringUtils.isEmpty(cid)){
+                printJson(ResultUtil.error(-1,"参数cid不能为空"),response);
+            }else{
+                String sql = "select * from d_weather where cid='"+cid+"' order by create_time desc limit 1";
+                List<Map<String,Object>> list = dao.findBySqlToMap(sql);
+                printJson(ResultUtil.success(list),response);
+            }
         }catch (Exception e){
             e.printStackTrace();
             printJson(ResultUtil.error(-1,e.getMessage()),response);
