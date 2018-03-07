@@ -44,7 +44,7 @@ public class WeatherTask {
             System.out.println("ret:" + ret);
             JSONObject jsonObject= JSONObject.parseObject(ret);
             jsonObject = jsonObject.getJSONArray("results").getJSONObject(0);
-            List<Map<String,Object>> list = dao.findBySqlToMap("select * from d_weather order by create_time desc limit 1");
+            List<Map<String,Object>> list = dao.findBySqlToMap("select * from d_weather where cid='WKDXH1Q2BNXZ' order by create_time desc limit 1");
             DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 
             Weather weather = new Weather();
