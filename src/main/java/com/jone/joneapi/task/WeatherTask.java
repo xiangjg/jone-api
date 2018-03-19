@@ -43,12 +43,6 @@ public class WeatherTask {
             List<WeatherCode> wcs = weatherCodeRepository.findAll();
             for (int i=0;i<wcs.size();i++) {
                 WeatherCode wc = wcs.get(i);
-                List<Map<String,Object>> list = dao.findBySqlToMap("select * from d_weather where cid='"+wc.getCid()+"' order by create_time desc limit 1");
-                if(list!=null&&list.size()>0){
-                    Date nowDate = (Date)list.get(0).get("update_time");
-                    if(df.format(nowDate).equals(df.format(new Date())))
-                        continue;
-                }
                 url = demo.generateGetNowWeatherURL(
                         wc.getCid(),
                         "zh-Hans",
@@ -62,6 +56,12 @@ public class WeatherTask {
                     jsonObject = jsonObject.getJSONArray("results").getJSONObject(0);
                 }catch (Exception e){
                     continue;
+                }
+                List<Map<String,Object>> list = dao.findBySqlToMap("select * from d_weather where cid='"+wc.getCid()+"' order by create_time desc limit 1");
+                if(list!=null&&list.size()>0){
+                    Integer _temperature = Integer.parseInt(list.get(0).get("temperature").toString());
+                    if(_temperature == jsonObject.getJSONObject("now").getInteger("temperature"))
+                        continue;
                 }
                 Weather weather = new Weather();
                 weather.setCid(jsonObject.getJSONObject("location").getString("id"));
