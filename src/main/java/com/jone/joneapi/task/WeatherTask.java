@@ -40,7 +40,7 @@ public class WeatherTask {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
         String url = "";
         try {
-            List<WeatherCode> wcs = weatherCodeRepository.findAll();
+            List<WeatherCode> wcs = weatherCodeRepository.findByProvince("贵州");
             for (int i=0;i<wcs.size();i++) {
                 WeatherCode wc = wcs.get(i);
                 url = demo.generateGetNowWeatherURL(
